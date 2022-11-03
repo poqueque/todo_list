@@ -3,7 +3,13 @@
 An example of Firebase Authentication and Cloud Firestore in Flutter
 
 ## Getting Started
-For security reasons the file firebase_options.dart is excluded from the repository. Use your own file pointing to your own project
+For security reasons the files:
+
+- lib/firebase_options.dart
+- android/app/google-services.json
+- ios/Runner/GoogleService-Info.plist
+
+are excluded from the repository. Use your own files pointing to your own project
 
 ## Getting Started
 
