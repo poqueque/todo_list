@@ -1,13 +1,11 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart' hide Task;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:todo_list/models/user.dart';
+import 'package:todo_list/services/firebase_service.dart';
 
 import '../models/task.dart';
+import '../utils/dialogs.dart';
 import 'splash.dart';
 
 class Home extends StatefulWidget {
@@ -18,18 +16,13 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final User _user = FirebaseAuth.instance.currentUser!;
-  final db = FirebaseFirestore.instance;
-  final storage = FirebaseStorage.instance;
-
   var tasks = <String, Task>{};
   XFile? image;
 
   @override
   void initState() {
     super.initState();
-    var stream =
-        db.collection('users').doc(_user.uid).collection('tasks').snapshots();
+    var stream = FirebaseService.instance.tasksStream;
 
     stream.listen((event) {
       tasks.clear();
@@ -54,31 +47,49 @@ class _HomeState extends State<Home> {
                   child: InkWell(
                     child: image != null
                         ? Image.file(File(image!.path))
-                        : (_user.photoURL != null)
-                            ? Image.network(_user.photoURL!)
+                        : (FirebaseService.instance.user!.photoURL != null)
+                            ? Image.network(
+                                FirebaseService.instance.user!.photoURL!)
                             : const Icon(Icons.person, size: 100),
                     onTap: () async {
                       final ImagePicker picker = ImagePicker();
                       image =
                           await picker.pickImage(source: ImageSource.gallery);
                       if (image != null) {
-                        TaskSnapshot taskSnapshot = await storage
-                            .ref("users/${_user.uid}/profile")
-                            .putFile(File(image!.path));
-                        var url = await taskSnapshot.ref.getDownloadURL();
-                        _user.updatePhotoURL(url);
-                        UserModel userModel = UserModel(url);
-                        db.collection('users').doc(_user.uid).update(userModel.toJson());
+                        await FirebaseService.instance.updatePhoto(image!);
                       }
                       setState(() {});
                     },
                   ),
                 )),
-            Row(
-              children: [
-                const Icon(Icons.person),
-                Text(_user.displayName ?? " --- ")
-              ],
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  const Icon(Icons.person),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      FirebaseService.instance.user?.displayName ?? " --- ",
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    child: const Icon(Icons.edit),
+                    onTap: () async {
+                      String? nameEntered =
+                          await inputDialog(context, "Your name");
+                      if (nameEntered != null) {
+                        await FirebaseService.instance
+                            .updateDisplayName(nameEntered);
+                        setState(() {});
+                      }
+                    },
+                  )
+                ],
+              ),
             )
           ],
         ),
@@ -89,10 +100,10 @@ class _HomeState extends State<Home> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "User: ${_user.uid}",
+              "User: ${FirebaseService.instance.user?.uid}",
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Text("User: ${_user.email}",
+            Text("User: ${FirebaseService.instance.user?.email}",
                 style: Theme.of(context).textTheme.titleLarge),
             for (var taskId in tasks.keys)
               Row(
@@ -102,35 +113,26 @@ class _HomeState extends State<Home> {
                       onChanged: (value) {
                         tasks[taskId]?.completed = value ?? false;
                         if (tasks[taskId] != null) {
-                          db
-                              .collection('users')
-                              .doc(_user.uid)
-                              .collection('tasks')
-                              .doc(taskId)
-                              .update(tasks[taskId]!.toJson());
+                          FirebaseService.instance
+                              .updateTask(taskId, tasks[taskId]!);
                         }
                         setState(() {});
                       }),
                   Expanded(child: Text(tasks[taskId]?.title ?? "-")),
                   InkWell(
                       onTap: () async {
-                        await db
-                            .collection('users')
-                            .doc(_user.uid)
-                            .collection('tasks')
-                            .doc(taskId)
-                            .delete();
+                        FirebaseService.instance.deleteTask(taskId);
                       },
                       child: const Icon(Icons.delete))
                 ],
               ),
             ElevatedButton(
                 onPressed: () {
-                  FirebaseAuth.instance.signOut();
+                  FirebaseService.instance.signOut();
                   Navigator.pushReplacement(context,
                       MaterialPageRoute(builder: (context) => const Splash()));
                 },
-                child: Text("Tancar Sessió")),
+                child: const Text("Tancar Sessió")),
           ],
         ),
       ),
@@ -138,14 +140,8 @@ class _HomeState extends State<Home> {
         child: const Icon(Icons.add),
         onPressed: () async {
           var task = Task("Task ${tasks.length}", false);
-          await db
-              .collection('users')
-              .doc(_user.uid)
-              .collection('tasks')
-              .add(task.toJson())
-              .then((DocumentReference doc) {
-            print("Document id : ${doc.id}");
-            tasks[doc.id] = task;
+          await FirebaseService.instance.addTask(task).then((String taskId) {
+            tasks[taskId] = task;
           });
           setState(() {});
         },

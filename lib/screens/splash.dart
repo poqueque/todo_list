@@ -1,10 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:todo_list/services/firebase_service.dart';
 
-import '../firebase_options.dart';
 import 'home.dart';
+import 'login.dart';
 
 class Splash extends StatefulWidget {
   const Splash({Key? key}) : super(key: key);
@@ -43,40 +41,14 @@ class _SplashState extends State<Splash> {
   }
 
   void workFlow() async {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    ).catchError((error) {
-      setState(() {
-        _status = "Error: ${error.toString()}";
-      });
-    });
-    setState(() {
-      _status = "Firebase inicialitzat";
-    });
+    _status = await FirebaseService.init();
+    setState(() {});
 
-    var user = FirebaseAuth.instance.currentUser;
+    var user = FirebaseService.instance.user;
     if (user == null) {
       if (!mounted) return;
-      Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => SignInScreen(
-                    providers: [EmailAuthProvider()],
-                    actions: [
-                      AuthStateChangeAction<SignedIn>((context, state) {
-                        Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const Home()));
-                      }),
-                      AuthStateChangeAction<UserCreated>((context, state) {
-                        Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const Home()));
-                      }),
-                    ],
-                  )));
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()));
     } else {
       if (!mounted) return;
       Navigator.pushReplacement(
