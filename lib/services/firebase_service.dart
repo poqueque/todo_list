@@ -18,23 +18,22 @@ class FirebaseService {
     return _instance!;
   }
 
-  final User _user = FirebaseAuth.instance.currentUser!;
   final _db = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
 
   User? get user => FirebaseAuth.instance.currentUser;
 
   Stream<QuerySnapshot<Map<String, dynamic>>> get tasksStream =>
-      _db.collection('users').doc(_user.uid).collection('tasks').snapshots();
+      _db.collection('users').doc(user?.uid).collection('tasks').snapshots();
 
   Future<void> updatePhoto(XFile image) async {
     TaskSnapshot taskSnapshot = await _storage
-        .ref("users/${_user.uid}/profile")
+        .ref("users/${user?.uid}/profile")
         .putFile(File(image.path));
     var url = await taskSnapshot.ref.getDownloadURL();
-    _user.updatePhotoURL(url);
+    user?.updatePhotoURL(url);
     UserModel userModel = UserModel(url);
-    _db.collection('users').doc(_user.uid).update(userModel.toJson());
+    _db.collection('users').doc(user?.uid).update(userModel.toJson());
   }
 
   Future<void> updateDisplayName(String nameEntered) async {
@@ -44,7 +43,7 @@ class FirebaseService {
   Future<void> updateTask(String taskId, Task task) async {
     await _db
         .collection('users')
-        .doc(_user.uid)
+        .doc(user?.uid)
         .collection('tasks')
         .doc(taskId)
         .update(task.toJson());
@@ -53,7 +52,7 @@ class FirebaseService {
   Future<void> deleteTask(String taskId) async {
     await _db
         .collection('users')
-        .doc(_user.uid)
+        .doc(user?.uid)
         .collection('tasks')
         .doc(taskId)
         .delete();
@@ -66,7 +65,7 @@ class FirebaseService {
   Future<String> addTask(Task task) async {
     DocumentReference doc = await _db
         .collection('users')
-        .doc(_user.uid)
+        .doc(user?.uid)
         .collection('tasks')
         .add(task.toJson());
     return doc.id;
