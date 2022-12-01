@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart' hide Task;
 import 'package:image_picker/image_picker.dart';
 import 'package:todo_list/models/task.dart';
@@ -20,6 +21,7 @@ class FirebaseService {
 
   final _db = FirebaseFirestore.instance;
   final _storage = FirebaseStorage.instance;
+  UserModel? userModel;
 
   User? get user => FirebaseAuth.instance.currentUser;
 
@@ -32,8 +34,9 @@ class FirebaseService {
         .putFile(File(image.path));
     var url = await taskSnapshot.ref.getDownloadURL();
     user?.updatePhotoURL(url);
-    UserModel userModel = UserModel(url);
-    _db.collection('users').doc(user?.uid).update(userModel.toJson());
+    userModel ??= UserModel();
+    userModel!.photoUrl = url;
+    _db.collection('users').doc(user?.uid).update(userModel!.toJson());
   }
 
   Future<void> updateDisplayName(String nameEntered) async {
@@ -58,6 +61,22 @@ class FirebaseService {
         .delete();
   }
 
+  Future<UserModel> getUser() async {
+    DocumentSnapshot<Map<String, dynamic>> snapshot =
+        await _db.collection('users').doc(user?.uid).get();
+    if (snapshot.data() != null) {
+      userModel = UserModel.fromJson(snapshot.data()!);
+    } else {
+      userModel = UserModel();
+    }
+    return userModel!;
+  }
+
+  Future<void> saveUser(UserModel userModelParam) async {
+    userModel = userModelParam;
+    await _db.collection('users').doc(user?.uid).set(userModel!.toJson());
+  }
+
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
   }
@@ -78,7 +97,22 @@ class FirebaseService {
     ).catchError((error) {
       status = "Error: ${error.toString()}";
     });
+
+    FirebaseMessaging.onMessage.listen(onMessageForeground);
+    FirebaseMessaging.onBackgroundMessage(onBackgroundMessage);
+
     status = "Firebase inicialitzat";
     return status;
   }
+
+  static void onMessageForeground(RemoteMessage event) {
+    print("Notification received. Notification: ${event.notification?.body}");
+    print("Notification received. Data: ${event.data}");
+  }
+}
+
+Future<void> onBackgroundMessage(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Rebut missatge en background: ${message.notification?.body}");
+  print("Rebut missatge en background: ${message.data}");
 }

@@ -90,21 +90,33 @@ class _HomeState extends State<Home> {
                   )
                 ],
               ),
-            )
+            ),
+            Spacer(),
+            Text(
+              "User: ${FirebaseService.instance.user?.uid}",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            Text("User: ${FirebaseService.instance.user?.email}",
+                style: Theme.of(context).textTheme.bodyMedium),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton(
+                  onPressed: () {
+                    FirebaseService.instance.signOut();
+                    Navigator.pushReplacement(context,
+                        MaterialPageRoute(builder: (context) => const Splash()));
+                  },
+                  child: const Text("Tancar Sessió")),
+            ),
           ],
         ),
       ),
       appBar: AppBar(title: const Text("Home")),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Text(
-              "User: ${FirebaseService.instance.user?.uid}",
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            Text("User: ${FirebaseService.instance.user?.email}",
-                style: Theme.of(context).textTheme.titleLarge),
+
             for (var taskId in tasks.keys)
               Row(
                 children: [
@@ -126,13 +138,6 @@ class _HomeState extends State<Home> {
                       child: const Icon(Icons.delete))
                 ],
               ),
-            ElevatedButton(
-                onPressed: () {
-                  FirebaseService.instance.signOut();
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (context) => const Splash()));
-                },
-                child: const Text("Tancar Sessió")),
           ],
         ),
       ),

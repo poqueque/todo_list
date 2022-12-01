@@ -1,15 +1,18 @@
 class UserModel {
-  late String photoUrl;
+  String? photoUrl;
+  String? fcmToken;
 
-  UserModel(this.photoUrl);
+  UserModel();
 
   UserModel.fromJson(Map<String, dynamic> json) {
     photoUrl = json['photoUrl'];
+    fcmToken = json['fcmToken'];
   }
 
   Map<String, dynamic> toJson() {
     return {
       'photoUrl': photoUrl,
+      'fcmToken': fcmToken,
     };
   }
 }

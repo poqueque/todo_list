@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:todo_list/services/firebase_service.dart';
 
@@ -50,6 +51,21 @@ class _SplashState extends State<Splash> {
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (context) => const LoginScreen()));
     } else {
+
+      NotificationSettings settings =
+          await FirebaseMessaging.instance.requestPermission();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized){
+        print("Permisos rebuts");
+      }
+
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      print("FCM Token: $fcmToken");
+      var userModel = await FirebaseService.instance.getUser();
+      userModel.fcmToken = fcmToken;
+      await FirebaseService.instance.saveUser(userModel);
+
+      await FirebaseMessaging.instance.subscribeToTopic('weather');
+
       if (!mounted) return;
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => const Home()));
